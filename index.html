@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quran Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Menambahkan font agar teks Arab lebih nyaman dibaca */
+        @import url('https://fonts.googleapis.com/css2?family=Amiri&display=swap');
+        .font-arabic { font-family: 'Amiri', serif; }
+    </style>
+</head>
+
+<body class="bg-gray-100 pb-20">
+
+<div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-4xl font-bold text-center mb-8 text-green-700">
+        📖 Quran Digital
+    </h1>
+
+    <div class="relative mb-8">
+        <input
+            id="search"
+            type="text"
+            placeholder="Cari surat (contoh: Al-Fatihah)..."
+            class="w-full p-4 pl-12 border rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none"
+            onkeyup="searchSurat()"
+        />
+        <span class="absolute left-4 top-4 text-gray-400">🔍</span>
+    </div>
+
+    <div id="suratList" class="grid md:grid-cols-2 gap-4 mb-10">
+        </div>
+
+    <hr class="border-t-2 border-gray-200 mb-10">
+
+    <div id="detailSection" class="hidden">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-white p-4 rounded-lg shadow-sm">
+            <h2 id="judulSurat" class="text-2xl font-bold text-green-800">Detail Surat</h2>
+            
+            <div class="flex bg-gray-200 p-1 rounded-lg">
+                <button id="btnAyat" onclick="changeMode('ayat')" class="px-4 py-2 rounded-md bg-white shadow-sm text-sm font-medium">Per Ayat</button>
+                <button id="btnSurah" onclick="changeMode('surah')" class="px-4 py-2 rounded-md text-sm font-medium">Satu Surah</button>
+            </div>
+        </div>
+
+        <div id="suratDetail" class="space-y-6"></div>
+
+        <div id="pagination" class="flex justify-between items-center mt-10">
+            <button onclick="prevPage()" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-50 transition shadow-sm">
+                ⬅️ Sebelumnya
+            </button>
+            <span id="pageInfo" class="text-sm font-semibold text-gray-500"></span>
+            <button onclick="nextPage()" class="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition shadow-sm">
+                Selanjutnya ➡️
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = "https://equran.id/api/v2";
+let semuaSurat = [];
+let semuaAyat = [];
+let mode = "ayat";
+let page = 0;
+let limit = 5;
+
+// --- 1. LOAD DAFTAR SURAT ---
+async function loadSurat() {
+    try {
+        const res = await fetch(`${API}/surat`);
+        const json = await res.json();
+        semuaSurat = json.data;
+        renderSurat(semuaSurat);
+    } catch (err) {
+        console.error("Gagal mengambil daftar surat:", err);
+    }
+}
+
+function renderSurat(list) {
+    const container = document.getElementById("suratList");
+    container.innerHTML = list.map(s => `
+        <div onclick="openSurat(${s.nomor})" 
+             class="bg-white p-5 rounded-xl shadow-sm border border-transparent hover:border-green-500 cursor-pointer transition-all hover:shadow-md group">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <span class="w-10 h-10 flex items-center justify-center bg-green-100 text-green-700 rounded-full font-bold text-sm">
+                        ${s.nomor}
+                    </span>
+                    <div>
+                        <div class="font-bold group-hover:text-green-600 transition">${s.namaLatin}</div>
+                        <div class="text-xs text-gray-400">${s.arti} • ${s.jumlahAyat} Ayat</div>
+                    </div>
+                </div>
+                <div class="text-2xl font-arabic text-gray-700">${s.nama}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// --- 2. FITUR CARI ---
+function searchSurat() {
+    const key = document.getElementById("search").value.toLowerCase();
+    const result = semuaSurat.filter(s => s.namaLatin.toLowerCase().includes(key));
+    renderSurat(result);
+}
+
+// --- 3. BUKA DETAIL SURAT ---
+async function openSurat(nomor) {
+    document.getElementById("suratDetail").innerHTML = "<p class='text-center py-10'>Memuat ayat...</p>";
+    document.getElementById("detailSection").classList.remove("hidden");
+    
+    try {
+        const res = await fetch(`${API}/surat/${nomor}`);
+        const json = await res.json();
+        semuaAyat = json.data.ayat;
+        
+        document.getElementById("judulSurat").innerText = `Surat ${json.data.namaLatin}`;
+        page = 0;
+        renderAyat();
+        
+        // Scroll otomatis ke detail
+        document.getElementById("detailSection").scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        alert("Gagal memuat detail surat.");
+    }
+}
+
+// --- 4. GANTI MODE & RENDER ---
+function changeMode(newMode) {
+    mode = newMode;
+    // Update UI tombol
+    const isAyat = mode === 'ayat';
+    document.getElementById("btnAyat").className = isAyat ? "px-4 py-2 rounded-md bg-white shadow-sm text-sm font-medium" : "px-4 py-2 rounded-md text-sm font-medium text-gray-500";
+    document.getElementById("btnSurah").className = !isAyat ? "px-4 py-2 rounded-md bg-white shadow-sm text-sm font-medium" : "px-4 py-2 rounded-md text-sm font-medium text-gray-500";
+    
+    renderAyat();
+}
+
+function renderAyat() {
+    const container = document.getElementById("suratDetail");
+    const pagination = document.getElementById("pagination");
+    let html = "";
+
+    if (mode === "ayat") {
+        pagination.classList.remove("hidden");
+        const start = page * limit;
+        const ayatSlice = semuaAyat.slice(start, start + limit);
+        
+        document.getElementById("pageInfo").innerText = `Halaman ${page + 1} dari ${Math.ceil(semuaAyat.length / limit)}`;
+
+        ayatSlice.forEach(a => {
+            html += `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-start mb-6">
+                        <span class="bg-gray-100 text-gray-600 text-xs font-bold px-3 py-1 rounded-full">Ayat ${a.nomorAyat}</span>
+                        <div class="text-right text-3xl font-arabic leading-[3rem] text-gray-800" dir="rtl">${a.teksArab}</div>
+                    </div>
+                    <div class="text-green-700 text-sm mb-3 font-medium">${a.teksLatin}</div>
+                    <div class="text-gray-600 text-base leading-relaxed mb-6">${a.teksIndonesia}</div>
+                    
+                    <audio controls class="w-full h-10 mb-4 opacity-80">
+                        <source src="${a.audio['01']}" type="audio/mpeg">
+                    </audio>
+
+                    <details class="group border-t border-gray-100 pt-4">
+                        <summary class="list-none cursor-pointer flex justify-between items-center text-sm font-bold text-gray-400 group-open:text-green-600">
+                            TAFSIR SINGKAT <span>▼</span>
+                        </summary>
+                        <p class="mt-4 text-sm text-gray-500 leading-relaxed bg-gray-50 p-4 rounded-lg">${a.teksIndonesia}</p>
+                    </details>
+                </div>`;
+        });
+    } else {
+        pagination.classList.add("hidden");
+        semuaAyat.forEach(a => {
+            html += `
+                <div class="bg-white p-6 rounded-xl shadow-sm mb-4">
+                    <div class="text-right text-2xl font-arabic mb-4" dir="rtl">
+                        <span class="inline-flex items-center justify-center w-8 h-8 border border-green-200 text-xs rounded-full ml-2 text-green-600 font-sans">${a.nomorAyat}</span>
+                        ${a.teksArab}
+                    </div>
+                    <div class="text-gray-500 text-sm italic border-l-2 border-green-200 pl-4">${a.teksIndonesia}</div>
+                </div>`;
+        });
+    }
+
+    container.innerHTML = html;
+}
+
+// --- 5. NAVIGASI ---
+function nextPage() {
+    if ((page + 1) * limit < semuaAyat.length) {
+        page++;
+        renderAyat();
+        window.scrollTo({ top: document.getElementById("detailSection").offsetTop - 20, behavior: 'smooth' });
+    }
+}
+
+function prevPage() {
+    if (page > 0) {
+        page--;
+        renderAyat();
+        window.scrollTo({ top: document.getElementById("detailSection").offsetTop - 20, behavior: 'smooth' });
+    }
+}
+
+// Jalankan saat startup
+loadSurat();
+</script>
+
+</body>
+</html>

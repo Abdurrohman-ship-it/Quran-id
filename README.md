@@ -1,1 +1,1 @@
-Website Al - qur'an digital
+Al - Qu'ran Digital
