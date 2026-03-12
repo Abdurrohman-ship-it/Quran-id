@@ -6,7 +6,6 @@
     <title>Quran Digital</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Menambahkan font agar teks Arab lebih nyaman dibaca */
         @import url('https://fonts.googleapis.com/css2?family=Amiri&display=swap');
         .font-arabic { font-family: 'Amiri', serif; }
     </style>
@@ -23,15 +22,14 @@
         <input
             id="search"
             type="text"
-            placeholder="Cari surat (contoh: Al-Fatihah)..."
+            placeholder="Cari surat..."
             class="w-full p-4 pl-12 border rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none"
             onkeyup="searchSurat()"
         />
         <span class="absolute left-4 top-4 text-gray-400">🔍</span>
     </div>
 
-    <div id="suratList" class="grid md:grid-cols-2 gap-4 mb-10">
-        </div>
+    <div id="suratList" class="grid md:grid-cols-2 gap-4 mb-10"></div>
 
     <hr class="border-t-2 border-gray-200 mb-10">
 
@@ -67,7 +65,6 @@ let mode = "ayat";
 let page = 0;
 let limit = 5;
 
-// --- 1. LOAD DAFTAR SURAT ---
 async function loadSurat() {
     try {
         const res = await fetch(`${API}/surat`);
@@ -100,14 +97,12 @@ function renderSurat(list) {
     `).join('');
 }
 
-// --- 2. FITUR CARI ---
 function searchSurat() {
     const key = document.getElementById("search").value.toLowerCase();
     const result = semuaSurat.filter(s => s.namaLatin.toLowerCase().includes(key));
     renderSurat(result);
 }
 
-// --- 3. BUKA DETAIL SURAT ---
 async function openSurat(nomor) {
     document.getElementById("suratDetail").innerHTML = "<p class='text-center py-10'>Memuat ayat...</p>";
     document.getElementById("detailSection").classList.remove("hidden");
@@ -116,26 +111,20 @@ async function openSurat(nomor) {
         const res = await fetch(`${API}/surat/${nomor}`);
         const json = await res.json();
         semuaAyat = json.data.ayat;
-        
         document.getElementById("judulSurat").innerText = `Surat ${json.data.namaLatin}`;
         page = 0;
         renderAyat();
-        
-        // Scroll otomatis ke detail
         document.getElementById("detailSection").scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
         alert("Gagal memuat detail surat.");
     }
 }
 
-// --- 4. GANTI MODE & RENDER ---
 function changeMode(newMode) {
     mode = newMode;
-    // Update UI tombol
     const isAyat = mode === 'ayat';
     document.getElementById("btnAyat").className = isAyat ? "px-4 py-2 rounded-md bg-white shadow-sm text-sm font-medium" : "px-4 py-2 rounded-md text-sm font-medium text-gray-500";
     document.getElementById("btnSurah").className = !isAyat ? "px-4 py-2 rounded-md bg-white shadow-sm text-sm font-medium" : "px-4 py-2 rounded-md text-sm font-medium text-gray-500";
-    
     renderAyat();
 }
 
@@ -148,7 +137,6 @@ function renderAyat() {
         pagination.classList.remove("hidden");
         const start = page * limit;
         const ayatSlice = semuaAyat.slice(start, start + limit);
-        
         document.getElementById("pageInfo").innerText = `Halaman ${page + 1} dari ${Math.ceil(semuaAyat.length / limit)}`;
 
         ayatSlice.forEach(a => {
@@ -158,19 +146,12 @@ function renderAyat() {
                         <span class="bg-gray-100 text-gray-600 text-xs font-bold px-3 py-1 rounded-full">Ayat ${a.nomorAyat}</span>
                         <div class="text-right text-3xl font-arabic leading-[3rem] text-gray-800" dir="rtl">${a.teksArab}</div>
                     </div>
-                    <div class="text-green-700 text-sm mb-3 font-medium">${a.teksLatin}</div>
-                    <div class="text-gray-600 text-base leading-relaxed mb-6">${a.teksIndonesia}</div>
+                    <div class="text-green-700 text-base mb-3 font-semibold">${a.teksLatin}</div>
+                    <div class="text-gray-700 text-lg leading-relaxed mb-8">${a.teksIndonesia}</div>
                     
-                    <audio controls class="w-full h-10 mb-4 opacity-80">
+                    <audio controls class="w-full h-10 opacity-90 mt-4">
                         <source src="${a.audio['01']}" type="audio/mpeg">
                     </audio>
-
-                    <details class="group border-t border-gray-100 pt-4">
-                        <summary class="list-none cursor-pointer flex justify-between items-center text-sm font-bold text-gray-400 group-open:text-green-600">
-                            TAFSIR SINGKAT <span>▼</span>
-                        </summary>
-                        <p class="mt-4 text-sm text-gray-500 leading-relaxed bg-gray-50 p-4 rounded-lg">${a.teksIndonesia}</p>
-                    </details>
                 </div>`;
         });
     } else {
@@ -182,15 +163,13 @@ function renderAyat() {
                         <span class="inline-flex items-center justify-center w-8 h-8 border border-green-200 text-xs rounded-full ml-2 text-green-600 font-sans">${a.nomorAyat}</span>
                         ${a.teksArab}
                     </div>
-                    <div class="text-gray-500 text-sm italic border-l-2 border-green-200 pl-4">${a.teksIndonesia}</div>
+                    <div class="text-gray-700 text-base border-l-4 border-green-400 pl-4 py-1">${a.teksIndonesia}</div>
                 </div>`;
         });
     }
-
     container.innerHTML = html;
 }
 
-// --- 5. NAVIGASI ---
 function nextPage() {
     if ((page + 1) * limit < semuaAyat.length) {
         page++;
@@ -207,9 +186,7 @@ function prevPage() {
     }
 }
 
-// Jalankan saat startup
 loadSurat();
 </script>
-
 </body>
 </html>
